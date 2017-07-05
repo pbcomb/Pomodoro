@@ -1,11 +1,15 @@
 import sun.audio.AudioPlayer;
 import sun.audio.AudioStream;
 
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,11 +21,14 @@ import java.util.TimerTask;
 public class PomodoroFrame extends JFrame {
 
     private JButton start = new JButton("Start");
+    private JButton browse = new JButton("Browse");
     private JLabel timeleft = new JLabel("Click to Go!", SwingConstants.CENTER);
     private JLabel status = new JLabel("", SwingConstants.CENTER);
 
+    private Clip clip = null;
+    private File soundpath = new File("/Users/Bill Chheu/Downloads/bell.wav");
+
     private Timer timer;
-    private Timer soundTimer;
 
     private int rsec = 0;
     private int min = 0;
@@ -29,6 +36,8 @@ public class PomodoroFrame extends JFrame {
     private int looped = 0;
 
     private boolean isBreak = false;
+
+
 
     public PomodoroFrame() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -49,19 +58,20 @@ public class PomodoroFrame extends JFrame {
         start.setFont(butfont);
 
         start.setBounds(125,300,250,75);
+        browse.setBounds(400,0,100,50);
         timeleft.setBounds(0,125,500,150);
         status.setBounds(0,10,500, 150);
 
 
         timer = new Timer(1000, new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e)  {
+            public void actionPerformed(ActionEvent e) {
                 sec--;
                 min = sec / 60;
                 rsec = sec % 60;
 
                 if (rsec >= 10) {
-                    timeleft.setText("<html><div style = 'text-align:center;'>" + Integer.toString(min) + ":" + Integer.toString(rsec) + "</div></html>");
+                    timeleft.setText(Integer.toString(min) + ":" + Integer.toString(rsec));
                 } else {
                     timeleft.setText(Integer.toString(min) + ":0" + Integer.toString(rsec));
                 }
@@ -70,15 +80,12 @@ public class PomodoroFrame extends JFrame {
                     timer.stop();
                     looped++;
 
+
                     try {
                         makeSound();
                     } catch (Exception p) {
-                        System.out.println("Selected Sound does not work! Try a different one.");
+                        System.out.println("Invalid audio, please try a different one.");
                     }
-
-                }
-
-
 
 
                     if (!isBreak) {
@@ -106,25 +113,46 @@ public class PomodoroFrame extends JFrame {
 
                     }
                 }
+            }
         });
 
         start.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {
+            public void actionPerformed(ActionEvent e) throws NullPointerException {
                 if (!timer.isRunning()) {
                     timer.start();
+
+                    clip.stop();
+
                     timeleft.setText("BUG IT UP!");
                     start.setText("Pause");
                 } else {
                    timer.stop();
+                   clip.stop();
+
                    start.setText("Start");
                 }
                 }
         });
 
+        browse.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                final JFileChooser fileChooser = new JFileChooser();
+                int returnVal = fileChooser.showOpenDialog(PomodoroFrame.this);
+
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    soundpath = fileChooser.getSelectedFile();
+                }
+
+            }
+        });
+
+        mainpanel.add(browse);
         mainpanel.add(start);
         mainpanel.add(timeleft);
         mainpanel.add(status);
+
 
 
 
@@ -133,10 +161,12 @@ public class PomodoroFrame extends JFrame {
     }
 
     private void makeSound() throws Exception {
-        String soundpath = "/Users/Bill Chheu/Downloads/bell.wav";
-        InputStream in = new FileInputStream(soundpath);
-        AudioStream audioStream = new AudioStream(in);
-        AudioPlayer.player.start(audioStream);
+        AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundpath);
+        clip = AudioSystem.getClip();
+        clip.open(audioInputStream);
+        clip.loop(Clip.LOOP_CONTINUOUSLY);
+        clip.start();
+
 
     }
 
